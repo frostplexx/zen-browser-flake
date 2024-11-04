@@ -9,29 +9,30 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       version = "1.0.1-a.6";
       downloadUrl = {
+        "x86_64-linux" = {
+          specific = {
+            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-specific.tar.bz2";
+            sha256 = "sha256:0jkzdrsd1qdw3pwdafnl5xb061vryxzgwmvp1a6ghdwgl2dm2fcz";
+          };
+          generic = {
+            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-generic.tar.bz2";
+            sha256 = "sha256:17c1ayxjdn8c28c5xvj3f94zjyiiwn8fihm3nq440b9dhkg01qcz";
+          };
+        };
         "aarch64-darwin" = {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-aarch64.dmg";
           # You'll need to replace this with the actual SHA256 for the macOS ARM build
           sha256 = "";
         };
-        "specific" = {
-          "x86_64-linux" = {
-            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-specific.tar.bz2";
-            sha256 = "sha256:0jkzdrsd1qdw3pwdafnl5xb061vryxzgwmvp1a6ghdwgl2dm2fcz";
-          };
-        };
-        "generic" = {
-          "x86_64-linux" = {
-            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-generic.tar.bz2";
-            sha256 = "sha256:17c1ayxjdn8c28c5xvj3f94zjyiiwn8fihm3nq440b9dhkg01qcz";
-          };
-        };
       };
 
-      mkZen = system: { variant }: 
+      mkZen = system: { variant ? null }: 
         let
           pkgs = import nixpkgs { inherit system; };
-          downloadData = downloadUrl."${variant}"."${system}";
+          downloadData = 
+            if system == "x86_64-linux" 
+            then downloadUrl.${system}.${variant}
+            else downloadUrl.${system};
           
           # System-specific runtime libraries
           runtimeLibs = with pkgs; 
@@ -140,10 +141,14 @@
           };
     in
     {
-      packages = forAllSystems (system: {
-        generic = mkZen system { variant = "generic"; };
-        specific = mkZen system { variant = "specific"; };
-        default = self.packages.${system}.specific;
-      });
+      packages = forAllSystems (system: 
+        if system == "x86_64-linux" then {
+          generic = mkZen system { variant = "generic"; };
+          specific = mkZen system { variant = "specific"; };
+          default = self.packages.${system}.specific;
+        } else {
+          default = mkZen system {};
+        }
+      );
     };
 }
