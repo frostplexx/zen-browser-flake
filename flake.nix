@@ -113,9 +113,8 @@ installPhase = if system == "x86_64-linux" then ''
             patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/vaapitest
             wrapProgram $out/bin/vaapitest --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
           '' else ''
-            chmod +x "$out/Applications/Zen Browser.app/Contents/MacOS/"*
-            xattr -rd com.apple.quarantine "$out/Applications/Zen Browser.app"
-            chmod -R 755 "$out/Applications/Zen Browser.app"
+            sudo chmod 755 "$out/Applications/Zen Browser.app/Contents/MacOS/"*
+            sudo xattr -rd com.apple.quarantine "$out/Applications/Zen Browser.app"
             wrapProgram "$out/Applications/Zen Browser.app/Contents/MacOS/zen" \
               --set DYLD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
               --set MOZ_LEGACY_PROFILES 1 \
