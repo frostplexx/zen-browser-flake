@@ -17,7 +17,7 @@
           "aarch64-darwin" = {
             url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
             # You'll need to replace this with the actual SHA256 for the macOS ARM build
-            sha256 = "sha256-REPLACE_WITH_ACTUAL_MACOS_ARM_SHA256";
+            sha256 = "";
           };
         };
         "generic" = {
@@ -28,7 +28,7 @@
           "aarch64-darwin" = {
             url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
             # You'll need to replace this with the actual SHA256 for the macOS ARM build
-            sha256 = "sha256-REPLACE_WITH_ACTUAL_MACOS_ARM_SHA256";
+            sha256 = "";
           };
         };
       };
