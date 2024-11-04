@@ -49,4 +49,33 @@
               --set MOZ_ALLOW_DOWNGRADE 1
           '';
 
-  # Rest of the code remains unchanged...
+        in
+          pkgs.stdenv.mkDerivation {
+            inherit version;
+            pname = "zen-browser";
+            src = builtins.fetchTarball {
+              url = downloadData.url;
+              sha256 = downloadData.sha256;
+            };
+            
+            desktopSrc = ./.;
+            phases = [ "installPhase" "fixupPhase" ];
+            nativeBuildInputs = with pkgs; [ makeWrapper ] 
+              ++ (if system == "x86_64-linux" then [ copyDesktopItems wrapGAppsHook ] else []);
+            
+            inherit installPhase fixupPhase;
+            
+            meta = {
+              mainProgram = "zen";
+              platforms = [ system ];
+            };
+          };
+    in
+    {
+      packages = forAllSystems (system: {
+        generic = mkZen system { variant = "generic"; };
+        specific = mkZen system { variant = "specific"; };
+        default = self.packages.${system}.specific;
+      });
+    };
+}
