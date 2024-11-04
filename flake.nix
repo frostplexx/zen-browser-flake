@@ -9,34 +9,30 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       version = "1.0.1-a.6";
       downloadUrl = {
-        "specific" = {
-          "x86_64-linux" = {
+        "x86_64-linux" = {
+          specific = {
             url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-specific.tar.bz2";
             sha256 = "sha256:0jkzdrsd1qdw3pwdafnl5xb061vryxzgwmvp1a6ghdwgl2dm2fcz";
           };
-          "aarch64-darwin" = {
-            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
-            # You'll need to replace this with the actual SHA256 for the macOS ARM build
-            sha256 = "sha256-REPLACE_WITH_ACTUAL_MACOS_ARM_SHA256";
-          };
-        };
-        "generic" = {
-          "x86_64-linux" = {
+          generic = {
             url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-generic.tar.bz2";
             sha256 = "sha256:17c1ayxjdn8c28c5xvj3f94zjyiiwn8fihm3nq440b9dhkg01qcz";
           };
-          "aarch64-darwin" = {
-            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
-            # You'll need to replace this with the actual SHA256 for the macOS ARM build
-            sha256 = "";
-          };
+        };
+        "aarch64-darwin" = {
+          url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-aarch64.dmg";
+          # You'll need to replace this with the actual SHA256 for the macOS ARM build
+          sha256 = "";
         };
       };
 
-      mkZen = system: { variant }: 
+      mkZen = system: { variant ? null }: 
         let
           pkgs = import nixpkgs { inherit system; };
-          downloadData = downloadUrl."${variant}"."${system}";
+          downloadData = 
+            if system == "x86_64-linux" 
+            then downloadUrl.${system}.${variant}
+            else downloadUrl.${system};
           
           # System-specific runtime libraries
           runtimeLibs = with pkgs; 
@@ -51,7 +47,6 @@
               libXfixes libXScrnSaver
             ])
             else if system == "aarch64-darwin" then [
-              # macOS-specific dependencies
               stdenv.cc.cc
               libiconv
               darwin.apple_sdk.frameworks.AppKit
@@ -67,7 +62,18 @@
               darwin.apple_sdk.frameworks.VideoToolbox
             ] else [];
 
-            installPhase = if system == "x86_64-linux" then ''
+          # System-specific source fetching
+          fetchSource = if system == "x86_64-linux" then
+            builtins.fetchTarball {
+              inherit (downloadData) url sha256;
+            }
+          else if system == "aarch64-darwin" then
+            pkgs.fetchurl {
+              inherit (downloadData) url sha256;
+            }
+          else null;
+
+installPhase = if system == "x86_64-linux" then ''
             mkdir -p $out/bin && cp -r $src/* $out/bin
             install -D $desktopSrc/zen.desktop $out/share/applications/zen.desktop
             install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
@@ -117,15 +123,13 @@
           pkgs.stdenv.mkDerivation {
             inherit version;
             pname = "zen-browser";
-            src = builtins.fetchTarball {
-              url = downloadData.url;
-              sha256 = downloadData.sha256;
-            };
+            
+            src = fetchSource;
             
             desktopSrc = ./.;
             phases = [ "installPhase" "fixupPhase" ];
             nativeBuildInputs = with pkgs; [ makeWrapper ] 
-              ++ (if system == "x86_64-linux" then [ copyDesktopItems wrapGAppsHook ] else []);
+              ++ (if system == "x86_64-linux" then [ copyDesktopItems wrapGAppsHook ] else [ undmg ]);
             
             inherit installPhase fixupPhase;
             
@@ -136,10 +140,14 @@
           };
     in
     {
-      packages = forAllSystems (system: {
-        generic = mkZen system { variant = "generic"; };
-        specific = mkZen system { variant = "specific"; };
-        default = self.packages.${system}.specific;
-      });
+      packages = forAllSystems (system: 
+        if system == "x86_64-linux" then {
+          generic = mkZen system { variant = "generic"; };
+          specific = mkZen system { variant = "specific"; };
+          default = self.packages.${system}.specific;
+        } else {
+          default = mkZen system {};
+        }
+      );
     };
 }
