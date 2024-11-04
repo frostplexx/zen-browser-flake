@@ -80,7 +80,7 @@
             chmod +x "$out/Applications/Zen Browser.app/Contents/MacOS/zen"
             
             wrapProgram "$out/Applications/Zen Browser.app/Contents/MacOS/zen" \
-              --set DYLD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
+              --set DYLD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath}" \
               --set MOZ_LEGACY_PROFILES 1 \
               --set MOZ_ALLOW_DOWNGRADE 1
           '';
