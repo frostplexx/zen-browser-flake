@@ -22,7 +22,7 @@
         "aarch64-darwin" = {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-aarch64.dmg";
           # You'll need to replace this with the actual SHA256 for the macOS ARM build
-          sha256 = "";
+          sha256 = "sha256-Ob+R6g0/DNJ02On9XSreiVeJ+IMIKtGbHrd5qXxdOiM=";
         };
       };
 
