@@ -6,7 +6,7 @@ Just add it to your NixOS `flake.nix` or home-manager:
 
 ```nix
 inputs = {
-  zen-browser.url = "github:MarceColl/zen-browser-flake";
+  zen-browser.url = "github:frostplexx/zen-browser-flake";
   ...
 }
 ```
@@ -23,9 +23,13 @@ The `default` package is the `specific` one for backwards compatibility with old
 Then in the `configuration.nix` in the `environment.systemPackages` add one of:
 
 ```nix
+# On Linux 
 inputs.zen-browser.packages."${system}".default
 inputs.zen-browser.packages."${system}".specific
 inputs.zen-browser.packages."${system}".generic
+
+# On MacOS
+inputs.zen-browser.packages."${system}".default
 ```
 
 Depending on which version you want
