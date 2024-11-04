@@ -90,10 +90,10 @@
             mkdir -p $out/bin
             
             # Copy the extracted .app bundle
-            cp -r "Zen.app" $out/Applications/
+            cp -r "Zen Browser.app" $out/Applications/
             
             # Create symlink in bin
-            ln -s $out/Applications/Zen.app/Contents/MacOS/zen $out/bin/zen
+            ln -s $out/Applications/Zen\ Browser.app/Contents/MacOS/zen $out/bin/zen
             
             # Clean up
             rm -rf $tmp_dir
