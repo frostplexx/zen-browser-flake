@@ -1,8 +1,73 @@
 {
   description = "Zen Browser";
-  # Previous code unchanged until installPhase...
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+  };
+  outputs = { self, nixpkgs }:
+    let
+      supportedSystems = [ "x86_64-linux" "aarch64-darwin" ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      version = "1.0.1-a.6";
+      downloadUrl = {
+        "specific" = {
+          "x86_64-linux" = {
+            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-specific.tar.bz2";
+            sha256 = "sha256:0jkzdrsd1qdw3pwdafnl5xb061vryxzgwmvp1a6ghdwgl2dm2fcz";
+          };
+          "aarch64-darwin" = {
+            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
+            # You'll need to replace this with the actual SHA256 for the macOS ARM build
+            sha256 = "sha256-REPLACE_WITH_ACTUAL_MACOS_ARM_SHA256";
+          };
+        };
+        "generic" = {
+          "x86_64-linux" = {
+            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-generic.tar.bz2";
+            sha256 = "sha256:17c1ayxjdn8c28c5xvj3f94zjyiiwn8fihm3nq440b9dhkg01qcz";
+          };
+          "aarch64-darwin" = {
+            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
+            # You'll need to replace this with the actual SHA256 for the macOS ARM build
+            sha256 = "sha256-REPLACE_WITH_ACTUAL_MACOS_ARM_SHA256";
+          };
+        };
+      };
 
-          installPhase = if system == "x86_64-linux" then ''
+      mkZen = system: { variant }: 
+        let
+          pkgs = import nixpkgs { inherit system; };
+          downloadData = downloadUrl."${variant}"."${system}";
+          
+          # System-specific runtime libraries
+          runtimeLibs = with pkgs; 
+            if system == "x86_64-linux" then [
+              libGL libGLU libevent libffi libjpeg libpng libstartup_notification libvpx libwebp
+              stdenv.cc.cc fontconfig libxkbcommon zlib freetype
+              gtk3 libxml2 dbus xcb-util-cursor alsa-lib libpulseaudio pango atk cairo gdk-pixbuf glib
+              udev libva mesa libnotify cups pciutils
+              ffmpeg libglvnd pipewire
+            ] ++ (with pkgs.xorg; [
+              libxcb libX11 libXcursor libXrandr libXi libXext libXcomposite libXdamage
+              libXfixes libXScrnSaver
+            ])
+            else if system == "aarch64-darwin" then [
+              # macOS-specific dependencies
+              stdenv.cc.cc
+              libiconv
+              darwin.apple_sdk.frameworks.AppKit
+              darwin.apple_sdk.frameworks.Foundation
+              darwin.apple_sdk.frameworks.CoreServices
+              darwin.apple_sdk.frameworks.CoreFoundation
+              darwin.apple_sdk.frameworks.Security
+              darwin.apple_sdk.frameworks.CoreAudio
+              darwin.apple_sdk.frameworks.AudioToolbox
+              darwin.apple_sdk.frameworks.CoreMedia
+              darwin.apple_sdk.frameworks.AVFoundation
+              darwin.apple_sdk.frameworks.MediaToolbox
+              darwin.apple_sdk.frameworks.VideoToolbox
+            ] else [];
+
+            installPhase = if system == "x86_64-linux" then ''
             mkdir -p $out/bin && cp -r $src/* $out/bin
             install -D $desktopSrc/zen.desktop $out/share/applications/zen.desktop
             install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
@@ -48,7 +113,6 @@
               --set MOZ_LEGACY_PROFILES 1 \
               --set MOZ_ALLOW_DOWNGRADE 1
           '';
-
         in
           pkgs.stdenv.mkDerivation {
             inherit version;
