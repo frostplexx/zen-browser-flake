@@ -9,26 +9,21 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       version = "1.0.1-a.6";
       downloadUrl = {
+        "aarch64-darwin" = {
+          url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-aarch64.dmg";
+          # You'll need to replace this with the actual SHA256 for the macOS ARM build
+          sha256 = "";
+        };
         "specific" = {
           "x86_64-linux" = {
             url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-specific.tar.bz2";
             sha256 = "sha256:0jkzdrsd1qdw3pwdafnl5xb061vryxzgwmvp1a6ghdwgl2dm2fcz";
-          };
-          "aarch64-darwin" = {
-            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
-            # You'll need to replace this with the actual SHA256 for the macOS ARM build
-            sha256 = "";
           };
         };
         "generic" = {
           "x86_64-linux" = {
             url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-generic.tar.bz2";
             sha256 = "sha256:17c1ayxjdn8c28c5xvj3f94zjyiiwn8fihm3nq440b9dhkg01qcz";
-          };
-          "aarch64-darwin" = {
-            url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-arm64.tar.bz2";
-            # You'll need to replace this with the actual SHA256 for the macOS ARM build
-            sha256 = "";
           };
         };
       };
@@ -51,7 +46,6 @@
               libXfixes libXScrnSaver
             ])
             else if system == "aarch64-darwin" then [
-              # macOS-specific dependencies
               stdenv.cc.cc
               libiconv
               darwin.apple_sdk.frameworks.AppKit
@@ -67,16 +61,41 @@
               darwin.apple_sdk.frameworks.VideoToolbox
             ] else [];
 
+          # System-specific source fetching
+          fetchSource = if system == "x86_64-linux" then
+            builtins.fetchTarball {
+              inherit (downloadData) url sha256;
+            }
+          else if system == "aarch64-darwin" then
+            pkgs.fetchurl {
+              inherit (downloadData) url sha256;
+            }
+          else null;
+
           # System-specific installation and fixup commands
           installPhase = if system == "x86_64-linux" then ''
             mkdir -p $out/bin && cp -r $src/* $out/bin
             install -D $desktopSrc/zen.desktop $out/share/applications/zen.desktop
             install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
           '' else ''
+            # Create a temporary directory for DMG extraction
+            tmp_dir=$(mktemp -d)
+            
+            # Extract DMG contents
+            ${pkgs.undmg}/bin/undmg $src
+            
+            # Create target directories
             mkdir -p $out/Applications
-            cp -r $src/Zen.app $out/Applications/
             mkdir -p $out/bin
+            
+            # Copy the extracted .app bundle
+            cp -r "Zen.app" $out/Applications/
+            
+            # Create symlink in bin
             ln -s $out/Applications/Zen.app/Contents/MacOS/zen $out/bin/zen
+            
+            # Clean up
+            rm -rf $tmp_dir
           '';
 
           fixupPhase = if system == "x86_64-linux" then ''
@@ -104,15 +123,13 @@
           pkgs.stdenv.mkDerivation {
             inherit version;
             pname = "zen-browser";
-            src = builtins.fetchTarball {
-              url = downloadData.url;
-              sha256 = downloadData.sha256;
-            };
+            
+            src = fetchSource;
             
             desktopSrc = ./.;
             phases = [ "installPhase" "fixupPhase" ];
             nativeBuildInputs = with pkgs; [ makeWrapper ] 
-              ++ (if system == "x86_64-linux" then [ copyDesktopItems wrapGAppsHook ] else []);
+              ++ (if system == "x86_64-linux" then [ copyDesktopItems wrapGAppsHook ] else [ undmg ]);
             
             inherit installPhase fixupPhase;
             
