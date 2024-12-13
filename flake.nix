@@ -24,7 +24,7 @@
         };
         "aarch64-darwin" = {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-aarch64.dmg";
-          sha256 = "";
+          sha256 = "IiMOO/6fq+w2gjAtItXNnmccjhaKkhyaEwaIPtVuOOM=";
         };
         "x86_64-darwin" = {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-x86_64.dmg";
@@ -42,7 +42,7 @@
         };
         "aarch64-darwin" = {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-aarch64.dmg";
-          sha256 = "";
+          sha256 = "IiMOO/6fq+w2gjAtItXNnmccjhaKkhyaEwaIPtVuOOM=";
         };
         "x86_64-darwin" = {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.macos-x86_64.dmg";
