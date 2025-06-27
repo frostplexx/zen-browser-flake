@@ -25,18 +25,28 @@
   undmg,
   makeWrapper,
   applicationName ?
-    "Zen Browser"
+    "Zen"
     + (
-      if name == "beta"
-      then " (Beta)"
-      else if name == "twilight"
-      then " (Twilight)"
-      else if name == "twilight-official"
-      then " (Twilight)"
+      if stdenv.isLinux
+      then "Browser"
+      else ""
+    )
+    + (
+      if stdenv.isLinux
+      then
+        (
+          if name == "beta"
+          then " (Beta)"
+          else if name == "twilight"
+          then " (Twilight)"
+          else if name == "twilight-official"
+          then " (Twilight)"
+          else ""
+        )
       else ""
     ),
 }: let
-  binaryName = "zen-${name}";
+  binaryName = if stdenv.isLinux then "zen-${name}" else "zen";
 
   libName = "zen-bin-${variant.version}";
 
@@ -127,7 +137,7 @@ in
         mkdir -p "$out/bin"
         makeWrapper "$out/Applications/Zen.app/Contents/MacOS/zen" "$out/bin/${binaryName}" \
           --set MOZ_APP_LAUNCHER "${binaryName}"
-        ln -s "$out/bin/${binaryName}" "$out/bin/zen"
+        # ln -s "$out/bin/${binaryName}" "$out/bin/zen"
 
         # Install policies for macOS
         mkdir -p "$out/Applications/Zen.app/Contents/Resources/distribution"
@@ -154,13 +164,15 @@ in
         install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen-${name}.png
       '';
 
-    passthru = {
-      inherit applicationName binaryName libName;
-      ffmpegSupport = true;
-      gssSupport = true;
-    } // lib.optionalAttrs isLinux {
-      gtk3 = gtk3;
-    };
+    passthru =
+      {
+        inherit applicationName binaryName libName;
+        ffmpegSupport = true;
+        gssSupport = true;
+      }
+      // lib.optionalAttrs isLinux {
+        gtk3 = gtk3;
+      };
 
     meta = {
       inherit desktopFile;

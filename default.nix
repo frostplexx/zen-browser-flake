@@ -6,7 +6,10 @@
     sources = builtins.fromJSON (builtins.readFile ./sources.json);
 
     # Map Darwin systems to universal binary
-    sourceKey = if pkgs.stdenv.isDarwin then "macos-universal" else system;
+    sourceKey =
+      if pkgs.stdenv.isDarwin
+      then "macos-universal"
+      else system;
 
     variant = sources.${entry}.${sourceKey};
 
