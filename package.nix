@@ -107,7 +107,7 @@ in
 
       undmg $src
       # Find the .app directory and move it to the expected location
-      find . -name "*.app" -type d -exec mv {} "Zen.app" \;
+      # find . -name "*.app" -type d -exec mv {} "Zen.app" \;
 
       runHook postUnpack
     '';
