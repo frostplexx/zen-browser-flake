@@ -21,6 +21,9 @@
   libva-vdpau-driver,
   writeText,
   patchelfUnstable, # have to use patchelfUnstable to support --no-clobber-old-sections
+  # macOS specific inputs
+  undmg,
+  makeWrapper,
   applicationName ?
     "Zen Browser"
     + (
@@ -40,6 +43,8 @@
   mozillaPlatforms = {
     x86_64-linux = "linux-x86_64";
     aarch64-linux = "linux-aarch64";
+    x86_64-darwin = "macos-universal";
+    aarch64-darwin = "macos-universal";
   };
 
   firefoxPolicies =
@@ -49,71 +54,101 @@
   policiesJson = writeText "firefox-policies.json" (builtins.toJSON {policies = firefoxPolicies;});
 
   pname = "zen-${name}-bin-unwrapped";
+
+  isLinux = stdenv.isLinux;
+  isDarwin = stdenv.isDarwin;
 in
   stdenv.mkDerivation {
     inherit pname;
     inherit (variant) version;
 
-    src = builtins.fetchTarball {inherit (variant) url sha256;};
+    src =
+      if isDarwin
+      then builtins.fetchurl {inherit (variant) url sha256;}
+      else builtins.fetchTarball {inherit (variant) url sha256;};
+
     desktopSrc = ./assets/desktop;
 
-    nativeBuildInputs = [
-      wrapGAppsHook3
-      autoPatchelfHook
-      patchelfUnstable
-    ];
-    buildInputs = [
+    nativeBuildInputs =
+      if isDarwin
+      then [undmg makeWrapper]
+      else [
+        wrapGAppsHook3
+        autoPatchelfHook
+        patchelfUnstable
+      ];
+
+    buildInputs = lib.optionals isLinux [
       gtk3
       adwaita-icon-theme
       alsa-lib
       dbus-glib
       libXtst
     ];
-    runtimeDependencies = [
+
+    runtimeDependencies = lib.optionals isLinux [
       curl
       libva.out
       pciutils
       libGL
       libva-vdpau-driver
     ];
-    appendRunpaths = [
+
+    appendRunpaths = lib.optionals isLinux [
       "${libGL}/lib"
       "${pipewire}/lib"
     ];
-    # Firefox uses "relrhack" to manually process relocations from a fixed offset
-    patchelfFlags = ["--no-clobber-old-sections"];
 
-    preFixup = ''
+    # Firefox uses "relrhack" to manually process relocations from a fixed offset
+    patchelfFlags = lib.optionals isLinux ["--no-clobber-old-sections"];
+
+    preFixup = lib.optionalString isLinux ''
       gappsWrapperArgs+=(
         --add-flags '--name "''${MOZ_APP_LAUNCHER:-${binaryName}}"'
       )
     '';
 
-    installPhase = ''
-      mkdir -p "$prefix/lib/${libName}"
-      cp -r "$src"/* "$prefix/lib/${libName}"
+    installPhase =
+      if isDarwin
+      then ''
+        mkdir -p "$out/Applications"
+        cp -r "Zen Browser.app" "$out/Applications/"
 
-      mkdir -p "$out/bin"
-      ln -s "$prefix/lib/${libName}/zen" "$out/bin/${binaryName}"
-      # ! twilight and beta could collide if both are installed
-      ln -s "$out/bin/${binaryName}" "$out/bin/zen"
+        mkdir -p "$out/bin"
+        makeWrapper "$out/Applications/Zen Browser.app/Contents/MacOS/zen" "$out/bin/${binaryName}" \
+          --set MOZ_APP_LAUNCHER "${binaryName}"
+        ln -s "$out/bin/${binaryName}" "$out/bin/zen"
 
-      install -D $desktopSrc/${desktopFile} $out/share/applications/${desktopFile}
+        # Install policies for macOS
+        mkdir -p "$out/Applications/Zen Browser.app/Contents/Resources/distribution"
+        ln -s ${policiesJson} "$out/Applications/Zen Browser.app/Contents/Resources/distribution/policies.json"
+      ''
+      else ''
+        mkdir -p "$prefix/lib/${libName}"
+        cp -r "$src"/* "$prefix/lib/${libName}"
 
-      mkdir -p "$out/lib/${libName}/distribution"
-      ln -s ${policiesJson} "$out/lib/${libName}/distribution/policies.json"
+        mkdir -p "$out/bin"
+        ln -s "$prefix/lib/${libName}/zen" "$out/bin/${binaryName}"
+        # ! twilight and beta could collide if both are installed
+        ln -s "$out/bin/${binaryName}" "$out/bin/zen"
 
-      install -D $src/browser/chrome/icons/default/default16.png $out/share/icons/hicolor/16x16/apps/zen-${name}.png
-      install -D $src/browser/chrome/icons/default/default32.png $out/share/icons/hicolor/32x32/apps/zen-${name}.png
-      install -D $src/browser/chrome/icons/default/default48.png $out/share/icons/hicolor/48x48/apps/zen-${name}.png
-      install -D $src/browser/chrome/icons/default/default64.png $out/share/icons/hicolor/64x64/apps/zen-${name}.png
-      install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen-${name}.png
-    '';
+        install -D $desktopSrc/${desktopFile} $out/share/applications/${desktopFile}
+
+        mkdir -p "$out/lib/${libName}/distribution"
+        ln -s ${policiesJson} "$out/lib/${libName}/distribution/policies.json"
+
+        install -D $src/browser/chrome/icons/default/default16.png $out/share/icons/hicolor/16x16/apps/zen-${name}.png
+        install -D $src/browser/chrome/icons/default/default32.png $out/share/icons/hicolor/32x32/apps/zen-${name}.png
+        install -D $src/browser/chrome/icons/default/default48.png $out/share/icons/hicolor/48x48/apps/zen-${name}.png
+        install -D $src/browser/chrome/icons/default/default64.png $out/share/icons/hicolor/64x64/apps/zen-${name}.png
+        install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen-${name}.png
+      '';
 
     passthru = {
       inherit applicationName binaryName libName;
       ffmpegSupport = true;
       gssSupport = true;
+    } // lib.optionalAttrs isLinux {
       gtk3 = gtk3;
     };
 
