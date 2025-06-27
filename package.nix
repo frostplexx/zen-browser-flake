@@ -107,7 +107,7 @@ in
 
       undmg $src
       # Find the .app directory and move it to the expected location
-      find . -name "*.app" -type d -exec mv {} "Zen Browser.app" \;
+      find . -name "*.app" -type d -exec mv {} "Zen.app" \;
 
       runHook postUnpack
     '';
@@ -122,16 +122,16 @@ in
       if isDarwin
       then ''
         mkdir -p "$out/Applications"
-        cp -r "Zen Browser.app" "$out/Applications/"
+        cp -r "Zen.app" "$out/Applications/"
 
         mkdir -p "$out/bin"
-        makeWrapper "$out/Applications/Zen Browser.app/Contents/MacOS/zen" "$out/bin/${binaryName}" \
+        makeWrapper "$out/Applications/Zen.app/Contents/MacOS/zen" "$out/bin/${binaryName}" \
           --set MOZ_APP_LAUNCHER "${binaryName}"
         ln -s "$out/bin/${binaryName}" "$out/bin/zen"
 
         # Install policies for macOS
-        mkdir -p "$out/Applications/Zen Browser.app/Contents/Resources/distribution"
-        ln -s ${policiesJson} "$out/Applications/Zen Browser.app/Contents/Resources/distribution/policies.json"
+        mkdir -p "$out/Applications/Zen.app/Contents/Resources/distribution"
+        ln -s ${policiesJson} "$out/Applications/Zen.app/Contents/Resources/distribution/policies.json"
       ''
       else ''
         mkdir -p "$prefix/lib/${libName}"
