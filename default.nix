@@ -3,7 +3,12 @@
   system ? pkgs.stdenv.hostPlatform.system,
 }: let
   mkZen = pkgs: name: system: entry: let
-    variant = (builtins.fromJSON (builtins.readFile ./sources.json)).${entry}.${system};
+    sources = builtins.fromJSON (builtins.readFile ./sources.json);
+
+    # Map Darwin systems to universal binary
+    sourceKey = if pkgs.stdenv.isDarwin then "macos-universal" else system;
+
+    variant = sources.${entry}.${sourceKey};
 
     desktopFile = "zen-${name}.desktop";
   in
