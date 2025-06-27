@@ -102,6 +102,16 @@ in
     # Firefox uses "relrhack" to manually process relocations from a fixed offset
     patchelfFlags = lib.optionals isLinux ["--no-clobber-old-sections"];
 
+    unpackPhase = lib.optionalString isDarwin ''
+      runHook preUnpack
+
+      undmg $src
+      # Find the .app directory and move it to the expected location
+      find . -name "*.app" -type d -exec mv {} "Zen Browser.app" \;
+
+      runHook postUnpack
+    '';
+
     preFixup = lib.optionalString isLinux ''
       gappsWrapperArgs+=(
         --add-flags '--name "''${MOZ_APP_LAUNCHER:-${binaryName}}"'
